@@ -1,0 +1,334 @@
+# Project Title: *Employee Layoffs Analysis*
+
+##  Objective
+
+- Take practical experience about data cleaning and EDA in SQL , 
+- Sharpen the learned concepts.
+---
+
+## 🛠 SQL Concepts Used
+
+* Core SQL concepts.
+* Advanced Concepts[window functions , CTE , subqueries ]
+
+---
+
+##  Project Structure
+
+**Data Cleaning**
+1. **Data Extraction/loading**
+
+   ```sql
+   -- creating another table for data cleaning
+    CREATE TABLE LAYOFFS_STAGING
+    LIKE LAYOFFS;
+    
+    INSERT LAYOFFS_STAGING
+    SELECT * 
+    FROM LAYOFFS;
+
+   ```
+
+2. **Removing duplicates rows**
+
+   ```sql
+    SELECT * FROM LAYOFFS_STAGING;
+
+    SELECT * ,
+    ROW_NUMBER() OVER(
+    PARTITION BY COMPANY,INDUSTRY,TOTAL_LAID_OFF,PERCENTAGE_LAID_OFF,'DATE') AS ROW_NUM
+    FROM LAYOFFS_STAGING;       -- GAVE ROW NUMBERS TO EACH SO THAT UNIQUE WILL GET DIFF NUMBERS
+    -- DO PARTITION BY EVERY SINGLE COLUMN 
+    
+    WITH DUPLICATES_CTE AS
+    (
+    SELECT * ,
+    ROW_NUMBER() OVER(
+    PARTITION BY COMPANY,LOCATION ,INDUSTRY,TOTAL_LAID_OFF,PERCENTAGE_LAID_OFF,'DATE',STAGE,COUNTRY,FUNDS_RAISED_MILLIONS) AS ROW_NUM
+    FROM LAYOFFS_STAGING
+    )
+    SELECT *
+    FROM DUPLICATES_CTE
+    WHERE ROW_NUM>1;
+    
+    SELECT*
+    FROM LAYOFFS
+    WHERE COMPANY="CASPER";
+    
+    
+    -- auto created a table based on the dataset 
+    CREATE TABLE `layoffs_staging2` (
+      `company` text,
+      `location` text,
+      `industry` text,
+      `total_laid_off` int DEFAULT NULL,
+      `percentage_laid_off` text,
+      `date` text,
+      `stage` text,
+      `country` text,
+      `funds_raised_millions` int DEFAULT NULL,
+      `ROW_NUM`INT 
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+    
+    
+    SELECT *
+    FROM LAYOFFS_STAGING2;
+    
+    INSERT  INTO LAYOFFS_STAGING2            -- transfering all data to another table 
+    SELECT * ,
+    ROW_NUMBER() OVER(
+    PARTITION BY COMPANY,INDUSTRY,TOTAL_LAID_OFF,PERCENTAGE_LAID_OFF,`DATE`) AS ROW_NUM
+    FROM LAYOFFS_STAGING; 
+    
+    SELECT *
+    FROM LAYOFFS_STAGING2
+    WHERE ROW_NUM =2;
+    
+    -- deleting duplicate rows
+    DELETE
+    FROM LAYOFFS_STAGING2
+    WHERE ROW_NUM >1;
+    
+    SET SQL_SAFE_UPDATES=0;
+    
+    SELECT *
+    FROM LAYOFFS_STAGING2
+    WHERE ROW_NUM>1;   -- CLEARED DUPLICATES
+   ```
+
+3. **Standardizing the data**
+
+   ```sql
+      SELECT * FROM LAYOFFS_STAGING2;
+    
+    SELECT COMPANY , TRIM(COMPANY)
+    FROM LAYOFFS_STAGING2;
+    
+    UPDATE LAYOFFS_STAGING2
+    SET COMPANY=TRIM(COMPANY);
+    
+    SELECT  DISTINCT INDUSTRY
+    FROM LAYOFFS_STAGING2
+    ORDER BY 1;
+    
+    SELECT  *
+    FROM LAYOFFS_STAGING2
+    WHERE INDUSTRY LIKE 'CRYPTO%';
+    
+    UPDATE LAYOFFS_STAGING2
+    SET INDUSTRY ='Crypto'
+    WHERE INDUSTRY LIKE 'CRYPTO%';
+    
+    SELECT * FROM LAYOFFS_STAGING2;
+    
+    SELECT  COUNT(COMPANY)        
+    FROM LAYOFFS_STAGING2
+    ORDER BY 1;
+    
+    SELECT  DISTINCT LOCATION -- CHECKING FOR ANY SPELL ERRORS
+    FROM LAYOFFS_STAGING2
+    ORDER BY 1;
+    
+    SELECT * FROM LAYOFFS_STAGING2;
+    
+    SELECT  DISTINCT COUNTRY
+    FROM LAYOFFS_STAGING2
+    ORDER BY 1;
+    
+    SELECT AVG(TOTAL_LAID_OFF)
+    FROM LAYOFFS_STAGING2;
+    
+    UPDATE LAYOFFS_STAGING2
+    SET COUNTRY = 'United States'
+    WHERE COUNTRY='United States.';
+    -- for timesereis visualization , we need date in DATE format 
+    
+    SELECT `date`,
+    STR_TO_DATE(`DATE`,'%m/%d/%Y')
+    FROM LAYOFFS_STAGING2;
+    
+    UPDATE LAYOFFS_STAGING2
+    SET DATE=STR_TO_DATE(`DATE`,'%m/%d/%Y');
+    
+    ALTER TABLE LAYOFFS_STAGING2
+    MODIFY COLUMN `date` DATE;
+    
+    SELECT * FROM LAYOFFS_STAGING2;
+    
+    SELECT DISTINCT STAGE 
+    FROM LAYOFFS_STAGING2
+    ORDER BY STAGE ASC;
+   ```
+4. **Dealing with null values**
+   ```sql
+    SELECT COUNT(COMPANY)
+    FROM LAYOFFS_STAGING2
+    WHERE TOTAL_LAID_OFF IS NULL
+    AND PERCENTAGE_LAID_OFF IS NULL;     -- IF BOTH ARE NULL, THEY ARE OF NO USE OF OURS MAYBE 
+    
+    
+    SELECT *
+    FROM LAYOFFS_STAGING2
+    WHERE INDUSTRY IS NULL
+    OR INDUSTRY ='';
+    
+    SELECT *
+    FROM LAYOFFS_STAGING2
+    WHERE COMPANY ='AIRBNB';  -- ONE OF RECORD WE ARE GETTING AS TRAVEL SO WE CAN UPDATE THE OTHER ONE 
+    
+    SELECT *
+    FROM LAYOFFS_STAGING2 AS T1
+    JOIN LAYOFFS_STAGING2 AS T2 
+    	ON T1.COMPANY=T2.COMPANY
+    WHERE(T1.INDUSTRY IS NULL OR T1.INDUSTRY ="")
+    AND T2.INDUSTRY IS NOT NULL;
+    
+    UPDATE LAYOFFS_STAGING2 
+    SET INDUSTRY=NULL
+    WHERE INDUSTRY ="";
+    
+    UPDATE LAYOFFS_STAGING2 AS T1 
+    JOIN LAYOFFS_STAGING2 AS T2 
+    	ON T1.COMPANY=T2.COMPANY
+    SET T1.INDUSTRY=T2.INDUSTRY
+    WHERE (T1.INDUSTRY IS NULL OR T1.INDUSTRY ="")
+    AND T2.INDUSTRY IS NOT NULL;
+    
+    
+    SELECT *
+    FROM LAYOFFS_STAGING2
+    WHERE TOTAL_LAID_OFF IS NULL
+    AND PERCENTAGE_LAID_OFF IS NULL;     -- IF BOTH ARE NULL, THEY ARE OF NO USE OF OURS MAYBE (360)
+    
+    DELETE 
+    FROM LAYOFFS_STAGING2
+    WHERE TOTAL_LAID_OFF IS NULL
+    AND PERCENTAGE_LAID_OFF IS NULL;
+    
+    SELECT *
+    FROM LAYOFFS_STAGING2;
+    
+    ALTER TABLE LAYOFFS_STAGING2
+    DROP COLUMN ROW_NUM;
+   ```
+**EDA**
+
+**MAXIMUM LAYOFF**
+```sql
+SELECT MAX(TOTAL_LAID_OFF)
+FROM layoffs_staging2;
+```
+
+**MINIMUM LAYOFF**
+```sql
+SELECT MIN(TOTAL_LAID_OFF)
+FROM layoffs_staging2;
+```
+
+**SEARCHING FOR ORGANIZATION LAID OFF 1% OF IT'S STAFF**
+```sql
+SELECT * 
+FROM layoffs_staging2
+WHERE percentage_laid_off=1
+ORDER BY total_laid_off DESC;
+```
+**ARRANGING COMAPNIES AS PER TOTAL LAID OFF COUNT **
+```sql
+SELECT COMPANY , SUM(TOTAL_LAID_OFF)
+FROM layoffs_staging2
+GROUP BY COMPANY
+ORDER BY 2 DESC ;
+```
+
+**EXTRACTING THE DATES FROM WHERE LAYOFF IS GIVEN **
+```sql
+SELECT MIN(DATE), MAX(DATE)
+FROM layoffs_staging2;
+```
+
+**COMAPARING INDUSTRY WISE LAYOFFS **
+```sql
+SELECT INDUSTRY , SUM(TOTAL_LAID_OFF)
+FROM layoffs_staging2
+GROUP BY INDUSTRY
+ORDER BY 2 DESC ;
+```
+
+**COMAPARING COUNTRY WISE LAYOFFS**
+```sql
+SELECT COUNTRY , SUM(TOTAL_LAID_OFF)
+FROM layoffs_staging2
+GROUP BY COUNTRY
+ORDER BY 2 DESC ;
+```
+
+**YEAR WISE LAYOFFS**
+```sql
+SELECT YEAR(DATE), SUM(TOTAL_LAID_OFF)
+FROM layoffs_staging2
+GROUP BY YEAR(DATE)
+ORDER BY 1 DESC ;
+```
+
+**STUDIED RELATION BTW COMPANY STAGE AND LAYOFFS**
+```sql
+SELECT STAGE, SUM(TOTAL_LAID_OFF)
+FROM layoffs_staging2
+GROUP BY STAGE
+ORDER BY 2 DESC ;
+```
+
+**ROLLING TOTAL LAYOFFS**
+```sql
+WITH ROLLING_TOTAL AS 
+(
+SELECT SUBSTRING(DATE,1,7) AS MONTHS, SUM(TOTAL_LAID_OFF) AS TOTAL_OFF
+FROM layoffs_staging2
+WHERE SUBSTRING(DATE,1,7) IS NOT NULL
+GROUP BY MONTHS
+ORDER BY MONTHS ASC 
+)
+SELECT MONTHS ,TOTAL_OFF , SUM(TOTAL_OFF) OVER (ORDER BY MONTHS)
+FROM ROLLING_TOTAL;
+
+```
+
+**ANALYZED LAYOFF BY TOTAL WRT COMAPANY AND YEAR**
+```sql 
+SELECT COMPANY ,YEAR(DATE), SUM(TOTAL_LAID_OFF)
+FROM layoffs_staging2
+GROUP BY COMPANY, YEAR(DATE)
+ORDER BY 3 DESC ;
+```
+
+**RANKING COMAPANIES BASED ON LAYOFF PER YEAR**
+```sql
+WITH COMPANY_YEAR (COMPANY , YEARS , TOTAL_LAID_OFF)AS 
+(
+SELECT COMPANY ,YEAR(DATE), SUM(TOTAL_LAID_OFF)
+FROM layoffs_staging2
+GROUP BY COMPANY, YEAR(DATE)
+), COMPANY_YEAR_RANK AS 
+(
+SELECT *, DENSE_RANK() OVER (PARTITION BY YEARS ORDER BY TOTAL_LAID_OFF DESC) AS RANKING
+FROM COMPANY_YEAR
+WHERE YEARS IS NOT NULL
+)
+SELECT*
+FROM COMPANY_YEAR_RANK
+WHERE RANKING<=5;
+```
+---
+
+##  Insights
+(Project Insights)
+
+- The datasets present data layoff btw 2020-03-11 and 2023-03-06
+- There is significant rise in layoffs post covid period ie 2022.
+- US, India, Netherland are the most impacted countries.
+- Consumer and Retail industries have seen maximum layoffs.
+- Amamzon - Google - Meta are the top companies in layoffs wrt total.
+  
+(Other Insights)
+
+- Got a practical experience working with SQL core and ADV concepts.
