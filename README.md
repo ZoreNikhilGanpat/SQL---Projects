@@ -6,8 +6,7 @@ Includes both **my own projects** and **guided case studies**.
 ## Projects
 
 ### My Projects
-- [Sales Analysis](my-projects/sales-analysis) – order trends, revenue by category
 
 ### Guided Projects
-- [HR Database](guided-projects/hr-database) – employee records queries
+- [Retail-Sales](https://github.com/ZoreNikhilGanpat/SQL---Projects/tree/74e4945a7079f164a84c85b99ce6005248ef9f02/guided-projects/retail-sales-analysis) – Importing, Cleaning ,EDA,Busines Problem Solving.
 
