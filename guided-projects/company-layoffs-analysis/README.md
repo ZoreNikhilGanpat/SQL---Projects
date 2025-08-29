@@ -6,7 +6,7 @@
 - Sharpen the learned concepts.
 ---
 
-## 🛠 SQL Concepts Used
+## SQL Concepts Used
 
 * Core SQL concepts.
 * Advanced Concepts[window functions , CTE , subqueries ]
