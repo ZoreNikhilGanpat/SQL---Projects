@@ -1,0 +1,209 @@
+CREATE DATABASE RETAIL;
+USE RETAIL;
+SELECT * FROM SALES;
+
+-- DATA CELANING 
+ALTER TABLE SALES 
+CHANGE ï»¿transactions_id  TRANS_ID INT ;
+
+UPDATE SALES
+SET SALE_DATE = STR_TO_DATE(SALE_DATE,'%d-%m-%Y');
+
+SET SQL_SAFE_UPDATES=0;
+
+ALTER TABLE SALES 
+MODIFY SALE_DATE DATE;
+
+SELECT * FROM SALES;
+
+ALTER TABLE SALES
+MODIFY COLUMN SALE_TIME TIME;
+
+ALTER TABLE SALES
+CHANGE CUSTOMER_ID CUST_ID INT,
+CHANGE GENDER GENDER VARCHAR(10),
+CHANGE AGE AGE INT,
+CHANGE CATEGORY CATEGORY VARCHAR(30),
+CHANGE QUANTIY QUANTITY INT,
+CHANGE PRICE_PER_UNIT PRICE_PER_UNIT INT,
+CHANGE COGS COGS INT,
+CHANGE TOTAL_SALE TOTAL_SALE INT;
+
+
+ALTER TABLE SALES
+MODIFY COLUMN TRANS_ID INT PRIMARY KEY;
+
+SELECT COUNT(*) FROM SALES;
+SELECT COUNT(*) FROM SALES_OG;
+
+
+SELECT GENDER, COUNT(TRANS_ID)
+FROM SALES
+GROUP BY GENDER;
+
+SELECT * 
+FROM SALES 
+WHERE SALE_DATE IS NULL
+   OR SALE_TIME IS NULL
+   OR CUST_ID IS NULL
+   OR AGE IS NULL
+   OR GENDER IS NULL
+   OR CATEGORY IS NULL
+   OR QUANTITY  IS NULL
+   OR PRICE_PER_UNIT  IS NULL
+   OR COGS IS NULL
+   OR TOTAL_SALE IS NULL;
+
+SELECT * FROM SALES;
+
+-- DATA EXPLORATION
+
+ -- total sales 
+ SELECT COUNT(*)
+ FROM SALES ;
+ 
+ -- total cust 
+SELECT COUNT(DISTINCT CUST_ID)
+FROM SALES ;
+
+-- diff cat 
+
+SELECT  DISTINCT CATEGORY
+FROM SALES;
+
+-- business problem answers :
+
+-- Write a SQL query to retrieve all columns for sales made on '2022-11-05'
+
+SELECT *
+FROM SALES
+WHERE SALE_DATE ='2022-11-05';
+
+-- Write a SQL query to retrieve all transactions where the category is 'Clothing' and the quantity sold is more thanor equal to 4 in the month of Nov-2022
+
+SELECT *,
+ROW_NUMBER() OVER()
+FROM SALES 
+WHERE CATEGORY ='Clothing'AND QUANTITY>=4 AND YEAR(SALE_DATE)=2022 AND MONTH(SALE_DATE)=11;
+
+SELECT * FROM SALES;
+
+-- Write a SQL query to calculate the total sales (total_sale) for each category.
+
+SELECT  CATEGORY,SUM(TOTAL_SALE) AS TOTAL 
+FROM SALES
+GROUP BY CATEGORY;
+
+-- Write a SQL query to find the average age of customers who purchased items from the 'Beauty' category.
+
+SELECT CATEGORY , AVG(AGE)
+FROM SALES
+WHERE CATEGORY ='BEAUTY';
+
+-- Write a SQL query to find all transactions where the total_sale is greater than 1000.
+
+SELECT COUNT(TRANS_ID) AS SALES_OVER_K 
+FROM SALES 
+WHERE TOTAL_SALE>1000;
+
+-- Write a SQL query to find the total number of transactions (transaction_id) made by each gender in each category.
+
+SELECT GENDER , COUNT(TRANS_ID)
+FROM SALES 
+GROUP BY GENDER;
+
+--  Write a SQL query to calculate the average sale for each month. Find out best selling month in each year
+
+SELECT YEAR(SALE_DATE) AS YEARS , MONTH(SALE_DATE) AS MONTHS, AVG(TOTAL_SALE)
+FROM SALES 
+GROUP BY MONTHS,YEARS
+ORDER BY AVG(TOTAL_SALE) DESC LIMIT 2;
+
+-- ANOTHER WAY FOR THE SAME QUERY
+
+WITH MONTHLY_SALES AS(
+	SELECT YEAR(SALE_DATE) AS YEARS,
+		MONTH(SALE_DATE) AS MONTHS,
+		AVG(TOTAL_SALE)AS AVG_SALE
+	FROM SALES
+    GROUP BY YEARS , MONTHS
+)
+SELECT YEARS , MONTHS , AVG_SALE
+FROM (
+	SELECT 
+		YEARS,
+        MONTHS,
+        AVG_SALE,
+        ROW_NUMBER() OVER(PARTITION BY YEARS ORDER BY AVG_SALE DESC) AS RN
+	FROM MONTHLY_SALES
+) AS AGGTABLE
+WHERE RN=1;
+
+-- Write a SQL query to calculate the total sale for each month. Find out best selling month in each year
+
+WITH MONTHLY_SALE AS (
+	SELECT
+		YEAR(SALE_DATE) AS YEARS, 
+        MONTH(SALE_DATE) AS MONTHS,
+        SUM(TOTAL_SALE) AS TOTAL_SALE
+	FROM SALES
+    GROUP BY YEARS , MONTHS
+)
+SELECT YEARS , MONTHS , TOTAL_SALE 
+FROM(
+	SELECT 
+		YEARS , 
+		MONTHS , 
+		TOTAL_SALE,
+		ROW_NUMBER() OVER(PARTITION BY YEARS ORDER BY TOTAL_SALE DESC ) AS RNK 
+	FROM MONTHLY_SALE )AS AGGTABLE 
+	WHERE RNK=1;
+    
+-- Write a SQL query to find the top 5 customers based on the highest total sales
+
+SELECT CUST_ID , SUM(TOTAL_SALE) AS TOTALS
+FROM  SALES
+GROUP BY CUST_ID 
+ORDER BY TOTALS  DESC LIMIT 5;
+
+-- Write a SQL query to find the number of unique customers who purchased items from each categorY
+
+SELECT CATEGORY ,SUM(DISTINCT (CUST_ID))
+FROM SALES 
+GROUP BY CATEGORY;
+
+-- Write a SQL query to create each shift and number of orders
+
+SELECT 
+	CASE
+		WHEN HOUR(SALE_TIME) BETWEEN 6 AND 11 THEN  'MORNING'
+        WHEN HOUR(SALE_TIME) BETWEEN 12 AND 17 THEN 'AFTERNOON'
+        WHEN HOUR(SALE_TIME) BETWEEN 18 AND 23 THEN 'EVENING'
+        ELSE 'NIGHT'
+	END AS SHIFT,
+    COUNT(TRANS_ID)
+FROM SALES
+GROUP BY SHIFT
+ORDER BY COUNT(TRANS_ID) DESC ;
+
+
+
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    
+
